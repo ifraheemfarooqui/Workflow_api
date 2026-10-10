@@ -12,7 +12,7 @@ class CommentUpdate(BaseModel):
 class CommentOut(CommentBase):
     id: int
     task_id: int
-    user_id: int
+    user_id: int | None
 
     class Config:
         from_attributes = True

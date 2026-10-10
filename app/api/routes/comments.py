@@ -28,7 +28,7 @@ def list_comments(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    return comment_service.list_comments(db, skip, limit, task_id, user_id)
+    return comment_service.list_comments(db, current_user.id, skip, limit, task_id, user_id)
 
 
 @router.get("/{comment_id}", response_model=CommentOut)
@@ -36,6 +36,8 @@ def read_comment(comment_id: int, db: Session = Depends(get_db), current_user: U
     db_comment = comment_service.get_comment(db, comment_id)
     if not db_comment:
         raise HTTPException(status_code=404, detail="Comment not found")
+    if not comment_service.can_access_comment(db, db_comment, current_user.id):
+        raise HTTPException(status_code=403, detail="You must be a member of this task's project team to access it")
     return db_comment
 
 

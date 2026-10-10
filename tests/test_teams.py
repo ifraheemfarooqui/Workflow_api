@@ -72,3 +72,15 @@ def test_manager_can_delete_team(client):
 def test_create_team_requires_auth(client):
     response = client.post("/teams/", json={"name": "No Auth Team"})
     assert response.status_code == 401
+
+
+def test_non_member_cannot_read_team_details_or_members(client):
+    manager_token = register_and_login(client, "private-manager@test.com")
+    client.headers.update({"Authorization": f"Bearer {manager_token}"})
+    team_id = client.post("/teams/", json={"name": "Private team"}).json()["id"]
+
+    outsider_token = register_and_login(client, "private-outsider@test.com")
+    client.headers.update({"Authorization": f"Bearer {outsider_token}"})
+
+    assert client.get(f"/teams/{team_id}").status_code == 403
+    assert client.get(f"/teams/{team_id}/members").status_code == 403

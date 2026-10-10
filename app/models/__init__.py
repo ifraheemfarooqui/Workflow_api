@@ -6,3 +6,6 @@ from app.models.comment import Comment
 from app.models.team_membership import TeamMembership
 from app.models.project_team import ProjectTeam
 from app.models.invite import Invite
+from app.models.message import Message
+from app.models.password_reset_token import PasswordResetToken
+from app.models.account_deletion_code import AccountDeletionCode

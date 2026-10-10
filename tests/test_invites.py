@@ -29,6 +29,21 @@ def test_non_manager_cannot_create_invite(client):
     assert response.status_code == 403
 
 
+def test_non_manager_cannot_list_team_invites(client):
+    manager_token = register_and_login(client, "invite-list-manager@test.com")
+    client.headers.update({"Authorization": f"Bearer {manager_token}"})
+    team_id = client.post("/teams/", json={"name": "Private invitations"}).json()["id"]
+    assert client.post(
+        f"/teams/{team_id}/invites",
+        json={"email": "invitee-list@test.com"},
+    ).status_code == 200
+
+    member_token = register_and_login(client, "invite-list-member@test.com")
+    client.headers.update({"Authorization": f"Bearer {member_token}"})
+    assert client.post(f"/teams/{team_id}/join").status_code == 200
+    assert client.get(f"/teams/{team_id}/invites").status_code == 403
+
+
 def test_registered_user_can_accept_invite(client):
     manager_token = register_and_login(client, "imanager3@test.com")
     client.headers.update({"Authorization": f"Bearer {manager_token}"})

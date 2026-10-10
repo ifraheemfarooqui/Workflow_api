@@ -8,7 +8,7 @@ class Comment(Base):
     id = Column(Integer,primary_key = True, index=True)
     content= Column(Text,nullable=False)
 
-    user_id = Column(Integer,ForeignKey("users.id"),nullable=False)
+    user_id = Column(Integer,ForeignKey("users.id", ondelete="SET NULL"),nullable=True)
     task_id = Column(Integer,ForeignKey("tasks.id"),nullable=False)
 
     author = relationship("User",back_populates="comments")

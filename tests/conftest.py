@@ -8,6 +8,9 @@ from app.db.base import Base
 from app.db.session import get_db
 from app.core.config import settings
 
+if settings.TEST_DATABASE_URL is None:
+    raise RuntimeError("Set TEST_DATABASE_URL to a dedicated disposable test database before running tests")
+
 engine = create_engine(settings.TEST_DATABASE_URL)
 TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 

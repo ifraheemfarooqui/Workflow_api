@@ -2,7 +2,11 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from app.db.session import get_db
-from app.api.deps import get_current_user, require_project_team_manager
+from app.api.deps import (
+    get_current_user,
+    require_project_team_manager,
+    require_project_team_member,
+)
 from app.models.user import User
 
 from app.schemas.project import (
@@ -34,7 +38,7 @@ def create_project(
 def get_project(
     project_id: int,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(require_project_team_member)
 ):
     db_project = project_service.get_project(db, project_id)
 
@@ -54,7 +58,7 @@ def list_projects(
     limit: int = 10,
     current_user: User = Depends(get_current_user)
 ):
-    return project_service.get_projects(db, skip, limit)
+    return project_service.get_projects(db, current_user.id, skip, limit)
 
 @router.put("/{project_id}", response_model=ProjectOut)
 def update_project(
@@ -90,11 +94,10 @@ def add_teams(
     db: Session = Depends(get_db),
     current_user: User = Depends(require_project_team_manager)
 ):
-    return project_service.add_teams_bulk(
-        db,
-        project_id,
-        payload.team_ids
-    )
+    try:
+        return project_service.add_teams_bulk(db, project_id, payload.team_ids, current_user.id)
+    except PermissionError as error:
+        raise HTTPException(status_code=403, detail=str(error))
 
 
 @router.delete("/{project_id}/teams/{team_id}")
@@ -104,11 +107,10 @@ def remove_team(
     db: Session = Depends(get_db),
     current_user: User = Depends(require_project_team_manager)
 ):
-    removed_team = project_service.remove_team(
-        db,
-        project_id,
-        team_id
-    )
+    try:
+        removed_team = project_service.remove_team(db, project_id, team_id, current_user.id)
+    except PermissionError as error:
+        raise HTTPException(status_code=403, detail=str(error))
 
     if not removed_team:
         raise HTTPException(
@@ -126,7 +128,7 @@ def remove_team(
 def list_project_teams(
     project_id: int,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(require_project_team_member)
 ):
     return project_service.get_project_teams(
         db,

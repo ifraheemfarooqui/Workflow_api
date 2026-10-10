@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from app.db.session import get_db
-from app.api.deps import get_current_user, require_team_manager
+from app.api.deps import get_current_user, require_team_manager, require_team_member
 from app.models.user import User
 
 from app.schemas.team import (
@@ -32,7 +32,7 @@ def create_team(
 def read_team(
     team_id: int,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_team_member),
 ):
     db_team = team_service.get_team(db, team_id)
 
@@ -139,7 +139,7 @@ def delete_member(
 def list_member(
     team_id: int,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(require_team_member)
 ):
     return team_service.get_team_members(db, team_id)
 

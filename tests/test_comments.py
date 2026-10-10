@@ -65,3 +65,27 @@ def test_project_manager_can_edit_others_comment(client):
     client.headers.update({"Authorization": f"Bearer {manager_token}"})
     response = client.put(f"/comments/{comment_id}", json={"content": "Edited by manager"})
     assert response.status_code == 200
+
+
+def test_non_member_cannot_read_comments_or_change_own_comment_after_removal(client):
+    manager_token, team_id, project_id, task_id = setup_team_project_task(
+        client, "comment-access-manager@test.com"
+    )
+    member_token = register_and_login(client, "comment-access-member@test.com")
+    client.headers.update({"Authorization": f"Bearer {member_token}"})
+    assert client.post(f"/teams/{team_id}/join").status_code == 200
+    member_id = client.get("/users/me").json()["id"]
+    comment_id = client.post(
+        "/comments/", json={"content": "Private comment", "task_id": task_id}
+    ).json()["id"]
+
+    client.headers.update({"Authorization": f"Bearer {manager_token}"})
+    assert client.delete(f"/teams/{team_id}/members/{member_id}").status_code == 200
+
+    client.headers.update({"Authorization": f"Bearer {member_token}"})
+    assert client.get(f"/comments/{comment_id}").status_code == 403
+    assert client.get(f"/comments/?task_id={task_id}").json() == []
+    assert client.put(
+        f"/comments/{comment_id}", json={"content": "Changed after removal"}
+    ).status_code == 403
+    assert client.delete(f"/comments/{comment_id}").status_code == 403

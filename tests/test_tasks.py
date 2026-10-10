@@ -45,19 +45,24 @@ def test_non_member_cannot_create_task(client):
 def test_cannot_assign_task_to_non_team_member(client):
     manager_token, team_id, project_id = setup_team_project(client, "tmanager3@test.com")
 
-    outsider_token = register_and_login(client, "toutsider3@test.com")
-    outsider_id = client.get("/users/", params={"limit": 50}).json()
+    outsider = client.post("/users/", json={
+        "name": "Test User",
+        "email": "toutsider3@test.com",
+        "password": "testpass123",
+    }).json()
+    outsider_token = client.post("/auth/login", data={
+        "username": "toutsider3@test.com",
+        "password": "testpass123",
+    }).json()["access_token"]
 
     client.headers.update({"Authorization": f"Bearer {manager_token}"})
-    outsider_user = next(u for u in client.get("/users/", params={"limit": 50}).json() if u["email"] == "toutsider3@test.com")
-
     response = client.post("/tasks/", json={
         "title": "Write intro",
         "description": "",
         "status": "todo",
         "priority": "medium",
         "project_id": project_id,
-        "assigned_to": outsider_user["id"],
+        "assigned_to": outsider["id"],
     })
     assert response.status_code == 404
 

@@ -35,13 +35,31 @@ def get_comment(db: Session, comment_id: int):
     return db.query(Comment).filter(Comment.id == comment_id).first()
 
 
-def list_comments(db: Session, skip: int = 0, limit: int = 10, task_id: int | None = None, user_id: int | None = None):
-    query = db.query(Comment)
+def can_access_comment(db: Session, comment: Comment, user_id: int) -> bool:
+    task = db.query(Task).filter(Task.id == comment.task_id).first()
+    return task is not None and _is_project_team_member(db, task.project_id, user_id)
+
+
+def list_comments(
+    db: Session,
+    current_user_id: int,
+    skip: int = 0,
+    limit: int = 10,
+    task_id: int | None = None,
+    user_id: int | None = None,
+):
+    query = (
+        db.query(Comment)
+        .join(Task, Task.id == Comment.task_id)
+        .join(ProjectTeam, ProjectTeam.project_id == Task.project_id)
+        .join(TeamMembership, TeamMembership.team_id == ProjectTeam.team_id)
+        .filter(TeamMembership.user_id == current_user_id)
+    )
     if task_id is not None:
         query = query.filter(Comment.task_id == task_id)
     if user_id is not None:
         query = query.filter(Comment.user_id == user_id)
-    return query.order_by(Comment.id).offset(skip).limit(limit).all()
+    return query.distinct().order_by(Comment.id).offset(skip).limit(limit).all()
 
 
 def update_comment(db: Session, comment_id: int, comment_update: CommentUpdate):
@@ -64,11 +82,11 @@ def delete_comment(db: Session, comment_id: int):
 
 
 def is_owner_or_project_manager(db: Session, comment: Comment, user_id: int) -> bool:
+    task = db.query(Task).filter(Task.id == comment.task_id).first()
+    if not task or not _is_project_team_member(db, task.project_id, user_id):
+        return False
     if comment.user_id == user_id:
         return True
-    task = db.query(Task).filter(Task.id == comment.task_id).first()
-    if not task:
-        return False
     return (
         db.query(ProjectTeam)
         .join(TeamMembership, TeamMembership.team_id == ProjectTeam.team_id)

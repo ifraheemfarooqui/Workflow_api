@@ -1,4 +1,6 @@
 import secrets
+import hashlib
+import hmac
 
 import bcrypt
 import jwt
@@ -22,3 +24,13 @@ def decode_access_token(token:str) -> dict:
 
 def generate_invite_token() -> str:
     return secrets.token_urlsafe(32)
+
+def generate_password_reset_token() -> str:
+    return secrets.token_urlsafe(32)
+
+def hash_reset_token(token: str) -> str:
+    return hashlib.sha256(token.encode("utf-8")).hexdigest()
+
+def hash_account_deletion_code(code: str, user_id: int) -> str:
+    message = f"account-deletion:{user_id}:{code}".encode("utf-8")
+    return hmac.new(settings.SECRET_KEY.encode("utf-8"), message, hashlib.sha256).hexdigest()

@@ -46,8 +46,18 @@ def delete_project(db: Session, project_id:int):
     db.commit()
     return db_project
 
-def get_projects(db: Session, skip: int = 0, limit: int = 10):
-    return db.query(Project).offset(skip).limit(limit).all()
+def get_projects(db: Session, user_id: int, skip: int = 0, limit: int = 10):
+    return (
+        db.query(Project)
+        .join(ProjectTeam, ProjectTeam.project_id == Project.id)
+        .join(TeamMembership, TeamMembership.team_id == ProjectTeam.team_id)
+        .filter(TeamMembership.user_id == user_id)
+        .distinct()
+        .order_by(Project.id)
+        .offset(skip)
+        .limit(limit)
+        .all()
+    )
 
 def get_project_teams(db: Session, project_id: int):
     return db.query(ProjectTeam).filter_by(project_id=project_id).all()
@@ -62,13 +72,24 @@ def add_team(db: Session, project_id: int, team_id: int):
     db.refresh(project_team)
     return project_team
 
-def add_teams_bulk(db: Session, project_id: int, team_ids: list[int]):
+def add_teams_bulk(db: Session, project_id: int, team_ids: list[int], user_id: int):
     db_project = get_project(db, project_id)
     if not db_project:
         return None
 
     added = []
     for team_id in team_ids:
+        is_manager = (
+            db.query(TeamMembership.id)
+            .filter(
+                TeamMembership.team_id == team_id,
+                TeamMembership.user_id == user_id,
+                TeamMembership.role_in_team == "manager",
+            )
+            .first()
+        )
+        if not is_manager:
+            raise PermissionError("You must manage every team added to this project")
         existing = db.query(ProjectTeam).filter_by(project_id=project_id, team_id=team_id).first()
         if existing:
             continue
@@ -82,11 +103,21 @@ def add_teams_bulk(db: Session, project_id: int, team_ids: list[int]):
     return added
 
 
-def remove_team(db: Session, project_id: int, team_id: int):
+def remove_team(db: Session, project_id: int, team_id: int, user_id: int):
+    is_manager = (
+        db.query(TeamMembership.id)
+        .filter(
+            TeamMembership.team_id == team_id,
+            TeamMembership.user_id == user_id,
+            TeamMembership.role_in_team == "manager",
+        )
+        .first()
+    )
+    if not is_manager:
+        raise PermissionError("You must manage this team to remove it from the project")
     project_team = db.query(ProjectTeam).filter_by(project_id=project_id, team_id=team_id).first()
     if not project_team:
         return None
     db.delete(project_team)
     db.commit()
     return project_team
-

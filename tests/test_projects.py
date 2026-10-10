@@ -81,3 +81,52 @@ def test_manager_can_add_second_team_to_project(client):
 
     teams_response = client.get(f"/projects/{project_id}/teams")
     assert len(teams_response.json()) == 2
+
+
+def test_projects_are_visible_only_to_project_team_members(client):
+    manager_token = register_and_login(client, "project-owner@test.com")
+    team_id = create_team(client, manager_token, "Owner team")
+    project_id = client.post(
+        "/projects/",
+        json={"name": "Private project", "description": "private", "team_id": team_id},
+    ).json()["id"]
+
+    outsider_token = register_and_login(client, "project-outsider@test.com")
+    outsider_team_id = create_team(client, outsider_token, "Outsider team")
+    outsider_project_id = client.post(
+        "/projects/",
+        json={"name": "Outsider project", "description": "", "team_id": outsider_team_id},
+    ).json()["id"]
+
+    assert client.get(f"/projects/{project_id}").status_code == 403
+    assert client.get(f"/projects/{project_id}/teams").status_code == 403
+    listed = client.get("/projects/").json()
+    assert [project["id"] for project in listed] == [outsider_project_id]
+
+
+def test_project_manager_cannot_add_or_remove_a_team_they_do_not_manage(
+    client, db_session
+):
+    owner_token = register_and_login(client, "project-manager@test.com")
+    owner_team_id = create_team(client, owner_token, "Managed team")
+    project_id = client.post(
+        "/projects/",
+        json={"name": "Shared project", "description": "", "team_id": owner_team_id},
+    ).json()["id"]
+
+    other_manager_token = register_and_login(client, "other-manager@test.com")
+    other_team_id = create_team(client, other_manager_token, "Other team")
+
+    client.headers.update({"Authorization": f"Bearer {owner_token}"})
+    add_response = client.post(
+        f"/projects/{project_id}/teams",
+        json={"team_ids": [other_team_id]},
+    )
+    assert add_response.status_code == 403
+
+    from app.models.project_team import ProjectTeam
+
+    db_session.add(ProjectTeam(project_id=project_id, team_id=other_team_id))
+    db_session.commit()
+    remove_response = client.delete(f"/projects/{project_id}/teams/{other_team_id}")
+    assert remove_response.status_code == 403
