@@ -33,6 +33,7 @@ def test_production_settings_accept_explicit_secure_configuration():
         FRONTEND_URL="https://app.example.test",
         CORS_ORIGINS=["https://app.example.test", "https://admin.example.test"],
         SMTP_HOST="smtp.example.test",
+        RESEND_API_KEY="re_test",
         SMTP_FROM_EMAIL="workflow@example.test",
     )
 
@@ -54,6 +55,7 @@ def test_production_settings_reject_local_insecure_or_mismatched_origins(fronten
             SECRET_KEY="s" * 40,
             FRONTEND_URL=frontend_url,
             CORS_ORIGINS=origins,
+            RESEND_API_KEY="re_test",
             SMTP_HOST="smtp.example.test",
             SMTP_FROM_EMAIL="workflow@example.test",
         )
@@ -72,6 +74,7 @@ def test_cors_origins_load_from_environment_as_json(monkeypatch):
         "DATABASE_URL": "mysql+pymysql://workflow:secret@db.example.test/workflow",
         "SECRET_KEY": "s" * 40,
         "FRONTEND_URL": "https://app.example.test",
+        "RESEND_API_KEY": "re_test",
         "CORS_ORIGINS": '["https://app.example.test"]',
         "SMTP_HOST": "smtp.example.test",
         "SMTP_FROM_EMAIL": "workflow@example.test",

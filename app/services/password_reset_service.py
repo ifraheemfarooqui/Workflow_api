@@ -17,13 +17,8 @@ logger = logging.getLogger(__name__)
 
 
 def ensure_email_configured() -> None:
-    if not settings.SMTP_HOST or not settings.SMTP_FROM_EMAIL:
-        raise RuntimeError("Password recovery email is not configured. Set SMTP_HOST and SMTP_FROM_EMAIL.")
-    if bool(settings.SMTP_USERNAME) != bool(settings.SMTP_PASSWORD):
-        raise RuntimeError("Configure both SMTP_USERNAME and SMTP_PASSWORD, or leave both empty.")
-    if settings.SMTP_USE_SSL and settings.SMTP_USE_TLS:
-        raise RuntimeError("Set only one of SMTP_USE_SSL or SMTP_USE_TLS.")
-
+    if not settings.RESEND_API_KEY or not settings.SMTP_FROM_EMAIL:
+        raise RuntimeError("Email is not configured. Set RESEND_API_KEY and SMTP_FROM_EMAIL.")
 
 def issue_reset_token(db: Session, user: User) -> str | None:
     now = datetime.now(timezone.utc)

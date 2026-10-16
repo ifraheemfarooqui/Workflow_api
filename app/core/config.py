@@ -26,6 +26,7 @@ class Settings(BaseSettings):
     SMTP_FROM_EMAIL: str | None = None
     SMTP_USE_TLS: bool = True
     SMTP_USE_SSL: bool = False
+    RESEND_API_KEY: str | None = None
 
     model_config = SettingsConfigDict(
         env_file=".env",
@@ -75,6 +76,7 @@ class Settings(BaseSettings):
     def validate_deployment_settings(self) -> "Settings":
         if self.TEST_DATABASE_URL is not None:
             from sqlalchemy.engine import make_url
+        
 
             database_url = make_url(self.DATABASE_URL)
             test_url = make_url(self.TEST_DATABASE_URL)
@@ -108,13 +110,8 @@ class Settings(BaseSettings):
                 raise ValueError("CORS_ORIGINS cannot contain localhost in staging/production")
             if urlsplit(self.FRONTEND_URL).hostname in {"localhost", "127.0.0.1", "::1"}:
                 raise ValueError("FRONTEND_URL cannot use localhost in staging/production")
-            if not self.SMTP_HOST or not self.SMTP_FROM_EMAIL:
-                raise ValueError("SMTP_HOST and SMTP_FROM_EMAIL are required in staging/production")
-            if bool(self.SMTP_USERNAME) != bool(self.SMTP_PASSWORD):
-                raise ValueError("Configure both SMTP_USERNAME and SMTP_PASSWORD, or leave both empty")
-            if self.SMTP_USE_SSL == self.SMTP_USE_TLS:
-                raise ValueError("Enable exactly one of SMTP_USE_SSL or SMTP_USE_TLS in staging/production")
-
+            if not self.RESEND_API_KEY or not self.SMTP_FROM_EMAIL:
+                raise ValueError("RESEND_API_KEY and SMTP_FROM_EMAIL are required in staging/production")
         return self
 
 
