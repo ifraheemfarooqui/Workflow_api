@@ -1,6 +1,5 @@
 import logging
 import smtplib
-import ssl
 from datetime import datetime, timedelta, timezone
 from email.message import EmailMessage
 from urllib.parse import urlencode
@@ -9,6 +8,7 @@ from sqlalchemy.orm import Session
 
 from app.core import security
 from app.core.config import settings
+from app.services.email_service import send_email
 from app.models.account_deletion_code import AccountDeletionCode
 from app.models.password_reset_token import PasswordResetToken
 from app.models.user import User
@@ -112,20 +112,7 @@ def send_password_reset_email(email: str, token: str) -> None:
         "If you did not request a reset, you can ignore this email."
     )
 
-    context = ssl.create_default_context()
-    if settings.SMTP_USE_SSL:
-        with smtplib.SMTP_SSL(settings.SMTP_HOST, settings.SMTP_PORT, timeout=10, context=context) as server:
-            if settings.SMTP_USERNAME:
-                server.login(settings.SMTP_USERNAME, settings.SMTP_PASSWORD)
-            server.send_message(message)
-        return
-
-    with smtplib.SMTP(settings.SMTP_HOST, settings.SMTP_PORT, timeout=10) as server:
-        if settings.SMTP_USE_TLS:
-            server.starttls(context=context)
-        if settings.SMTP_USERNAME:
-            server.login(settings.SMTP_USERNAME, settings.SMTP_PASSWORD)
-        server.send_message(message)
+    send_email(message)
 
 
 def send_account_deletion_code(email: str, code: str) -> None:
@@ -141,17 +128,4 @@ def send_account_deletion_code(email: str, code: str) -> None:
         "and can only be used once. If you did not request this, ignore this email."
     )
 
-    context = ssl.create_default_context()
-    if settings.SMTP_USE_SSL:
-        with smtplib.SMTP_SSL(settings.SMTP_HOST, settings.SMTP_PORT, timeout=10, context=context) as server:
-            if settings.SMTP_USERNAME:
-                server.login(settings.SMTP_USERNAME, settings.SMTP_PASSWORD)
-            server.send_message(message)
-        return
-
-    with smtplib.SMTP(settings.SMTP_HOST, settings.SMTP_PORT, timeout=10) as server:
-        if settings.SMTP_USE_TLS:
-            server.starttls(context=context)
-        if settings.SMTP_USERNAME:
-            server.login(settings.SMTP_USERNAME, settings.SMTP_PASSWORD)
-        server.send_message(message)
+    send_email(message)

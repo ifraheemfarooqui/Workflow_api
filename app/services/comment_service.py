@@ -4,6 +4,7 @@ from app.models.task import Task
 from app.models.project_team import ProjectTeam
 from app.models.team_membership import TeamMembership
 from app.schemas.comment import CommentCreate, CommentUpdate
+from app.services import notification_service
 
 
 def _is_project_team_member(db: Session, project_id: int, user_id: int) -> bool:
@@ -26,6 +27,16 @@ def create_comment(db: Session, comment: CommentCreate, author_id: int):
 
     db_comment = Comment(content=comment.content, task_id=comment.task_id, user_id=author_id)
     db.add(db_comment)
+    db.flush()
+    notification_service.notify_project(
+        db,
+        task.project_id,
+        author_id,
+        "comment_added",
+        "New task comment",
+        f"A comment was added to “{task.title}”: {comment.content[:180]}",
+        task_id=task.id,
+    )
     db.commit()
     db.refresh(db_comment)
     return db_comment
@@ -62,20 +73,43 @@ def list_comments(
     return query.distinct().order_by(Comment.id).offset(skip).limit(limit).all()
 
 
-def update_comment(db: Session, comment_id: int, comment_update: CommentUpdate):
+def update_comment(db: Session, comment_id: int, comment_update: CommentUpdate, actor_id: int):
     db_comment = get_comment(db, comment_id)
     if not db_comment:
         return None
+    task = db.query(Task).filter(Task.id == db_comment.task_id).first()
+    old_content = db_comment.content
     db_comment.content = comment_update.content
+    if old_content != db_comment.content and task:
+        notification_service.notify_project(
+            db,
+            task.project_id,
+            actor_id,
+            "comment_updated",
+            "Task comment updated",
+            f"A comment on “{task.title}” was edited.",
+            task_id=task.id,
+        )
     db.commit()
     db.refresh(db_comment)
     return db_comment
 
 
-def delete_comment(db: Session, comment_id: int):
+def delete_comment(db: Session, comment_id: int, actor_id: int):
     db_comment = get_comment(db, comment_id)
     if not db_comment:
         return None
+    task = db.query(Task).filter(Task.id == db_comment.task_id).first()
+    if task:
+        notification_service.notify_project(
+            db,
+            task.project_id,
+            actor_id,
+            "comment_deleted",
+            "Task comment removed",
+            f"A comment was removed from “{task.title}”.",
+            task_id=task.id,
+        )
     db.delete(db_comment)
     db.commit()
     return db_comment

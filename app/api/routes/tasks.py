@@ -51,7 +51,7 @@ def update_task(
     current_user: User = Depends(require_task_project_member),
 ):
     try:
-        db_task = task_service.update_task(db, task_id, task_update)
+        db_task = task_service.update_task(db, task_id, task_update, current_user.id)
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
     if not db_task:
@@ -61,7 +61,7 @@ def update_task(
 
 @router.delete("/{task_id}")
 def delete_task(task_id: int, db: Session = Depends(get_db), current_user: User = Depends(require_task_project_member)):
-    db_task = task_service.delete_task(db, task_id)
+    db_task = task_service.delete_task(db, task_id, current_user.id)
     if not db_task:
         raise HTTPException(status_code=404, detail="Task not found")
     return {"detail": "Task deleted"}

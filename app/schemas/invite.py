@@ -1,6 +1,7 @@
 from pydantic import BaseModel, EmailStr
 from datetime import datetime
 from typing import Literal
+from app.schemas.team import TeamOut
 
 class InviteCreate(BaseModel):
     email: EmailStr
@@ -15,3 +16,7 @@ class InviteOut(BaseModel):
 
     class Config:
         from_attributes = True
+
+
+class PendingInviteOut(InviteOut):
+    team: TeamOut

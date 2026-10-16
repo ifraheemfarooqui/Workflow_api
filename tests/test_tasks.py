@@ -94,3 +94,50 @@ def test_task_list_scoped_to_user_teams(client):
     response = client.get("/tasks/")
     assert response.status_code == 200
     assert response.json() == []
+
+
+def test_task_can_be_assigned_to_a_team_linked_to_its_project(client):
+    manager_token, team_id, project_id = setup_team_project(client, "team-assignee-manager@test.com")
+    client.headers.update({"Authorization": f"Bearer {manager_token}"})
+    second_team_id = client.post("/teams/", json={"name": "Second team"}).json()["id"]
+    client.post(f"/projects/{project_id}/teams", json={"team_ids": [second_team_id]})
+
+    response = client.post("/tasks/", json={
+        "title": "Shared task",
+        "project_id": project_id,
+        "assigned_team_id": second_team_id,
+    })
+
+    assert response.status_code == 201
+    assert response.json()["assigned_team_id"] == second_team_id
+
+
+def test_task_cannot_be_assigned_to_a_team_not_linked_to_its_project(client):
+    manager_token, team_id, project_id = setup_team_project(client, "unlinked-team-manager@test.com")
+    client.headers.update({"Authorization": f"Bearer {manager_token}"})
+    second_team_id = client.post("/teams/", json={"name": "Unlinked team"}).json()["id"]
+
+    response = client.post("/tasks/", json={
+        "title": "Invalid team assignment",
+        "project_id": project_id,
+        "assigned_team_id": second_team_id,
+    })
+
+    assert response.status_code == 404
+    assert response.json()["detail"] == "Assigned team is not linked to this project"
+
+
+def test_removing_project_team_clears_task_team_assignment(client):
+    manager_token, team_id, project_id = setup_team_project(client, "remove-team-manager@test.com")
+    client.headers.update({"Authorization": f"Bearer {manager_token}"})
+    second_team_id = client.post("/teams/", json={"name": "Assigned team"}).json()["id"]
+    client.post(f"/projects/{project_id}/teams", json={"team_ids": [second_team_id]})
+    task = client.post("/tasks/", json={
+        "title": "Assigned task",
+        "project_id": project_id,
+        "assigned_team_id": second_team_id,
+    }).json()
+
+    response = client.delete(f"/projects/{project_id}/teams/{second_team_id}")
+    assert response.status_code == 200
+    assert client.get(f"/tasks/{task['id']}").json()["assigned_team_id"] is None

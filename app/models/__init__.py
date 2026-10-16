@@ -9,3 +9,4 @@ from app.models.invite import Invite
 from app.models.message import Message
 from app.models.password_reset_token import PasswordResetToken
 from app.models.account_deletion_code import AccountDeletionCode
+from app.models.notification import Notification

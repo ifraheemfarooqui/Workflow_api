@@ -14,6 +14,7 @@ This application models a lightweight team workflow system where:
 - Comments can be added to tasks and managed by the author or project manager.
 - Team managers can create invites that users accept by email and token.
 - Team members can send real-time team messages and direct messages to users who share a team.
+- Members receive a private notification feed for team, project, task, membership, and comment activity; task notifications include project completion progress.
 - Users can update profile details, change or reset passwords by email, and request verified account deletion.
 
 ## Tech Stack
@@ -210,22 +211,23 @@ All HTTP routes below use the `/` prefix shown. **Public** routes do not require
 | Users | `GET /users/` (Authenticated) | Lists only users sharing at least one team with the caller; `search` matches name or email and `skip`/`limit` paginate. |
 | Users | `GET /users/{user_id}` (Authenticated) | Retrieves the caller's own profile or a teammate's profile; other users are forbidden. |
 | Account deletion | `POST /users/me/deletion/request`, `POST /users/me/deletion/confirm` (Authenticated) | Sends and validates an email confirmation code; anonymizes retained message/comment authors, unassigns tasks, removes memberships and revokes sessions. Sole-manager deletion is rejected. |
-| Teams | `POST /teams/`, `GET /teams/`, `GET /teams/{team_id}` | Creates a team (creator becomes manager), lists teams, or reads a team. |
+| Teams | `POST /teams/`, `GET /teams/`, `GET /teams/{team_id}` | Creates a team (creator becomes manager), lists only the signed-in user's teams, or reads a team. |
 | Teams | `PUT /teams/{team_id}`, `DELETE /teams/{team_id}` (Manager) | Updates or deletes a team. |
 | Membership | `POST /teams/{team_id}/join`, `GET /teams/{team_id}/members` | Joins a team or lists its members. |
 | Membership | `POST /teams/{team_id}/members/{user_id}`, `POST /teams/{team_id}/members`, `DELETE /teams/{team_id}/members/{user_id}` (Manager) | Adds one or multiple members, or removes a member. |
 | Projects | `POST /projects/`, `GET /projects/`, `GET /projects/{project_id}` | Creates, lists, or reads projects. Project creation is restricted to a member of an associated team. |
 | Projects | `PUT /projects/{project_id}`, `DELETE /projects/{project_id}` (Manager) | Updates or deletes a project. |
 | Project teams | `POST /projects/{project_id}/teams`, `DELETE /projects/{project_id}/teams/{team_id}`, `GET /projects/{project_id}/teams` | Adds, removes, or lists teams associated with a project. |
-| Tasks | `POST /tasks/`, `GET /tasks/`, `GET /tasks/{task_id}` (Authenticated team member) | Creates, filters/lists, or reads project tasks. Creation and assignment require project-team membership. |
+| Tasks | `POST /tasks/`, `GET /tasks/`, `GET /tasks/{task_id}` (Authenticated team member) | Creates, filters/lists, or reads project tasks. Creation and assignment require project-team membership; a task may be assigned to a linked team and an individual. |
 | Tasks | `PUT /tasks/{task_id}`, `DELETE /tasks/{task_id}` (Project-team member) | Updates or deletes a task. |
 | Comments | `POST /comments/`, `GET /comments/`, `GET /comments/{comment_id}` | Adds or reads task comments. Comment creation checks project-team access. |
 | Comments | `PUT /comments/{comment_id}`, `DELETE /comments/{comment_id}` | Allows the comment author or a project-team manager to update/delete a comment. |
 | Messaging | `GET /teams/{team_id}/messages`, `GET /messages/conversations`, `GET /messages/direct/{user_id}` (Authenticated) | Reads team history (team member), latest direct conversations, or direct history. Direct-message participants must share a team. History supports `before_id` and `limit`. |
 | Messaging | `PATCH /messages/{message_id}`, `DELETE /messages/{message_id}` | Edits or soft-deletes the caller's message; changes are broadcast to connected participants. |
 | Messaging | `WS /ws?token=...` | Authenticated real-time send/receive for team and direct messages; the server limits each socket to 10 frames per 10 seconds. |
-| Invites | `POST /teams/{team_id}/invites`, `GET /teams/{team_id}/invites` (Manager) | Creates or lists team invitations. |
-| Invites | `POST /invites/{token}/accept` (Authenticated) | Accepts an invitation for the signed-in account. |
+| Invites | `POST /teams/{team_id}/invites`, `GET /teams/{team_id}/invites` (Manager) | Emails or lists team invitations. Invitation delivery requires SMTP configuration. |
+| Invites | `GET /invites/mine`, `POST /invites/{token}/accept` (Authenticated) | Lists invitations sent to the signed-in account and accepts one. |
+| Notifications | `GET /notifications/`, `PATCH /notifications/{notification_id}/read`, `POST /notifications/read-all` (Authenticated) | Lists the caller's team activity, marks one notification read, or marks all as read. Task changes include project and linked-team completion counts. |
 
 **Authorization note:** team and project mutation permissions are enforced by route dependencies and services. User listing and direct-message access are explicitly restricted to shared-team contacts. Consult the route modules and service modules for precise status codes and validation details.
 
@@ -510,6 +512,7 @@ Team membership behavior:
 
 - The creator of a team automatically becomes a `manager`.
 - A user may join via the join endpoint or an accepted invite.
+- Managers can email a team invitation link to an existing account or a new user. Existing users accept by signing in with the invited email; new users join during registration with the invitation link.
 
 ### Projects
 

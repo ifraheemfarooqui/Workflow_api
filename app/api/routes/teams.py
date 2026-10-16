@@ -49,7 +49,7 @@ def list_team(
     limit: int = 10,
     current_user: User = Depends(get_current_user)
 ):
-    return team_service.get_teams(db, skip, limit)
+    return team_service.get_teams(db, current_user.id, skip, limit)
 
 
 @router.put("/{team_id}", response_model=TeamOut)
@@ -59,7 +59,7 @@ def update_team(
     db: Session = Depends(get_db),
     current_user: User = Depends(require_team_manager),
 ):
-    db_team = team_service.update_team(db, team_id, team_update)
+    db_team = team_service.update_team(db, team_id, team_update, current_user.id)
 
     if not db_team:
         raise HTTPException(status_code=404, detail="Team not found")
@@ -73,7 +73,7 @@ def delete_team(
     db: Session = Depends(get_db),
     current_user: User = Depends(require_team_manager),
 ):
-    db_team = team_service.delete_team(db, team_id)
+    db_team = team_service.delete_team(db, team_id, current_user.id)
 
     if not db_team:
         raise HTTPException(status_code=404, detail="Team not found")
@@ -88,7 +88,7 @@ def add_member(
     db: Session = Depends(get_db),
     current_user: User = Depends(require_team_manager),
 ):
-    membership = team_service.add_member(db, team_id, user_id)
+    membership = team_service.add_member(db, team_id, user_id, current_user.id)
     if not membership:
         raise HTTPException(
             status_code=404,
@@ -114,6 +114,7 @@ def add_members(
         db,
         team_id,
         payload.user_ids,
+        current_user.id,
         payload.role_in_team
     )
 
@@ -128,7 +129,7 @@ def delete_member(
     if not team_service.get_team(db, team_id):
         raise HTTPException(status_code=404, detail="Team not found")
 
-    membership = team_service.remove_member(db, team_id, user_id)
+    membership = team_service.remove_member(db, team_id, user_id, current_user.id)
     if not membership:
         raise HTTPException(status_code=404, detail="Membership not found")
 

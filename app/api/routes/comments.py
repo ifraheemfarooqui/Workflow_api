@@ -55,7 +55,7 @@ def update_comment(
     if not comment_service.is_owner_or_project_manager(db, db_comment, current_user.id):
         raise HTTPException(status_code=403, detail="You can only edit your own comments")
 
-    return comment_service.update_comment(db, comment_id, comment_update)
+    return comment_service.update_comment(db, comment_id, comment_update, current_user.id)
 
 
 @router.delete("/{comment_id}")
@@ -67,4 +67,4 @@ def delete_comment(comment_id: int, db: Session = Depends(get_db), current_user:
     if not comment_service.is_owner_or_project_manager(db, db_comment, current_user.id):
         raise HTTPException(status_code=403, detail="You can only delete your own comments")
 
-    return {"detail": "Comment deleted"} if comment_service.delete_comment(db, comment_id) else None
+    return {"detail": "Comment deleted"} if comment_service.delete_comment(db, comment_id, current_user.id) else None

@@ -67,7 +67,7 @@ def update_project(
     db: Session = Depends(get_db),
     current_user: User = Depends(require_project_team_manager),   # was get_current_user
 ):
-    db_project = project_service.update_project(db, project_id, project_update)
+    db_project = project_service.update_project(db, project_id, project_update, current_user.id)
     if not db_project:
         raise HTTPException(status_code=404, detail="Project not found")
     return db_project
@@ -78,7 +78,7 @@ def delete_project(
     db: Session = Depends(get_db),
     current_user: User = Depends(require_project_team_manager),
 ):
-    db_project = project_service.delete_project(db, project_id)
+    db_project = project_service.delete_project(db, project_id, current_user.id)
     if not db_project:
         raise HTTPException(status_code=404, detail="Project not found")
     return {"detail": "Project removed"}

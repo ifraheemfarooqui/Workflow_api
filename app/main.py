@@ -9,6 +9,7 @@ from app.api.routes import auth
 from app.api.routes import invites
 from app.api.routes import messages
 from app.api.routes import ws
+from app.api.routes import notifications
 from app.core.exceptions import integrity_error_handler, sqlalchemy_error_handler, unhandled_exception_handler
 from app.core.config import settings
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
@@ -31,6 +32,7 @@ app.include_router(comments.router)
 app.include_router(auth.router)
 app.include_router(invites.router)
 app.include_router(ws.router)
+app.include_router(notifications.router)
 
 @app.get("/health")
 async def health_check():

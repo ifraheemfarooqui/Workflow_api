@@ -8,6 +8,7 @@ class TaskBase(BaseModel):
     priority: Literal["low", "medium", "high"] = "medium"
     project_id: int
     assigned_to: int | None = None
+    assigned_team_id: int | None = None
 
 class CreateTask(TaskBase):
     pass
@@ -19,6 +20,7 @@ class TaskUpdate(BaseModel):
     priority: Literal["low", "medium", "high"] | None = None
     project_id: int | None = None
     assigned_to: int | None = None
+    assigned_team_id: int | None = None
 
     @field_validator("title", "description", "status", "priority", "project_id")
     @classmethod
@@ -32,4 +34,3 @@ class TaskOut(TaskBase):
 
     class Config:
         from_attributes = True
-

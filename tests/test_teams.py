@@ -84,3 +84,21 @@ def test_non_member_cannot_read_team_details_or_members(client):
 
     assert client.get(f"/teams/{team_id}").status_code == 403
     assert client.get(f"/teams/{team_id}/members").status_code == 403
+
+
+def test_list_teams_only_returns_teams_the_user_belongs_to(client):
+    manager_token = register_and_login(client, "team-list-manager@test.com")
+    client.headers.update({"Authorization": f"Bearer {manager_token}"})
+    team_id = client.post("/teams/", json={"name": "Member team"}).json()["id"]
+
+    outsider_token = register_and_login(client, "team-list-outsider@test.com")
+    client.headers.update({"Authorization": f"Bearer {outsider_token}"})
+
+    response = client.get("/teams/")
+    assert response.status_code == 200
+    assert response.json() == []
+
+    client.headers.update({"Authorization": f"Bearer {manager_token}"})
+    response = client.get("/teams/")
+    assert response.status_code == 200
+    assert [team["id"] for team in response.json()] == [team_id]
