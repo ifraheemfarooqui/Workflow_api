@@ -71,7 +71,7 @@ def create_invite(db: Session, team_id: int, invite: InviteCreate, invited_by: i
     except (OSError, smtplib.SMTPException) as error:
         db_invite.status = "revoked"
         db.commit()
-        logger.error("Could not send team invitation email (%s)", type(error).__name__)
+        logger.error("Could not send team invitation email (%s: %s)", type(error).__name__, error)
         raise RuntimeError("Team invitation email could not be sent right now.") from None
     return db_invite
 
